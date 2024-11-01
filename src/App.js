@@ -9,53 +9,39 @@ import Missing from './Missing';
 import { Route, Routes, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
+import api from './api/posts'
+import EditPost from './editPost';
 
 function App() {
   const [search, setSearch] = useState('');
   const [postTitle, setPostTitle] = useState('');
   const [postBody, setPostBody] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [posts, setPosts] = useState(
-    [
-      {
-        id: 1,
-        title: "Exploring the Cosmos",
-        datetime: "2024-09-03T08:00",
-        body: "Discovering new galaxies and understanding the mysteries of space."
-      },
-      {
-        id: 2,
-        title: "The Art of Cooking",
-        datetime: "2024-09-02T12:30",
-        body: "A journey through culinary delights and flavors from around the world."
-      },
-      {
-        id: 3,
-        title: "Understanding Technology",
-        datetime: "2024-09-01T09:45",
-        body: "The evolution of technology and its impact on our daily lives."
-      },
-      {
-        id: 4,
-        title: "History of Ancient Civilizations",
-        datetime: "2024-08-31T14:20",
-        body: "Exploring the rich history and culture of ancient civilizations."
-      },
-      {
-        id: 5,
-        title: "The Future of AI",
-        datetime: "2024-08-30T11:00",
-        body: "How artificial intelligence is shaping the future of industries and society."
-      }
-    ]
-  )
+  const [posts, setPosts] = useState([])
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
   const navigate = useNavigate();
 
-  const handleDelete = (id) => {
-    const postsList = posts.filter((post) => post.id !== id);
-    setPosts(postsList)
-    navigate('/');
-  }
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const response = await api.get('/posts');
+        // axios will automatically catch the errrors when they're not in the 200 range, so we do not need to bother about using throw error if response is not aligned with what we want
+        setPosts(response.data);
+      } catch (err) {
+        if (err.response) {
+          console.log(err.response.data);
+          console.log(err.response.status);
+          console.log(err.response.headers);
+        }
+
+        else {
+          console.log(`Error: ${err.message}`);
+        }
+      }
+    }
+    fetchPosts();
+  }, [])
 
   useEffect(() => {
     const filteredPosts = posts.filter((post) =>
@@ -66,25 +52,53 @@ function App() {
   }, [posts, search]);
   // Filter the posts according to the search
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const id = posts.length ? posts[posts.length - 1].id + 1 : 1;
     const datetime = format(new Date(), 'yyyy-MM-dd\'T\'HH:mm');
     const newPost = { id, title: postTitle, datetime, body: postBody }
-    const newPostsList = [...posts, newPost];
-    setPosts(newPostsList);
-    setPostTitle('');
-    setPostBody('');
-    navigate('/');
+    try {
+      const response = await api.post('/posts', newPost);
+      const newPostsList = [...posts, response.data];
+      setPosts(newPostsList);
+      setPostTitle('');
+      setPostBody('');
+      navigate('/');
+    } catch (err) {
+      console.log(`Error: ${err.message}`);
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/posts/${id}`);
+      const postsList = posts.filter((post) => post.id !== id);
+      setPosts(postsList)
+      navigate('/');
+    } catch (err) {
+      console.log(err.response.data);
+    }
+  }
+
+  const handleEdit = async (id) => {
+    const dateTime = format(new Date(), 'yyyy-MM-dd\'T\'HH:mm')
+    const editedPost = { id, title: editTitle, datetime: dateTime, body: editBody };
+    try {
+      const response = await api.put(`/posts/${id}`, editedPost);
+      setPosts(posts.map(post => post.id === id ? { ...response.data } : post));
+      setEditTitle('');
+      setEditBody('');
+      navigate('/');
+    } catch (err) {
+      console.log(`Error: ${err.message}`);
+    }
   }
 
   return (
     <div className="App">
       <Header title={"BLOG"} />
-      <Nav
-        search={search}
-        setSearch={setSearch}
-      />
+
+      <Nav search={search} setSearch={setSearch}/>
 
       <Routes>
         <Route path="/" element={<Home posts={searchResults} />} />
@@ -97,6 +111,15 @@ function App() {
           handleSubmit={handleSubmit}
         />} />
 
+        <Route path='/edit/:id' element={<EditPost
+          posts={posts}
+          editTitle={editTitle}
+          setEditTitle={setEditTitle}
+          editBody={editBody}
+          setEditBody={setEditBody}
+          handleEdit={handleEdit}
+        />} />
+
         <Route path="/post/:id" element={<PostPage
           posts={posts}
           handleDelete={handleDelete}
@@ -107,7 +130,7 @@ function App() {
         <Route path="*" element={<Missing />} />
       </Routes>
 
-      <Footer />
+      <Footer /> 
     </div>
   );
 }

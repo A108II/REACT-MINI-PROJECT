@@ -1,0 +1,16 @@
+{
+  "posts": [
+    {
+      "id": "1",
+      "title": "Exploring the Cosmos",
+      "datetime": "2024-09-03T08:00",
+      "body": "Discovering new galaxies and understanding the mysteries of space."
+    },
+    {
+      "id": "2",
+      "title": "The Art Of Cooking",
+      "datetime": "2024-09-08T13:41",
+      "body": "A journey through culinary delights and flavors from around the globe."
+    }
+  ]
+}
